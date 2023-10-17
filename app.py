@@ -36,7 +36,7 @@ st.markdown('[Access the data dictionary and template](https://docs.google.com/s
 
 
 
-# Read file from streamlit
+# Read file from streamlit and create a copy to do the maps
 data_file = st.sidebar.file_uploader("Upload Your Sample manifest (CSV/XLSX)", type=['xlsx', 'csv'])
 
 if data_file is not None:
@@ -44,6 +44,7 @@ if data_file is not None:
 else:
     st.stop()
 
+datamaps_copy = data.copy()
 
 
 # Check all columns are present in the input 
@@ -68,5 +69,37 @@ else:
 
 
 # Perform numeric variables specific checks (ie, are thay on a sensible range or we can detect errors?)
+
+
+
+# Example on how to map users code to our standard codes
+# If we use this approach I would like to avoid code repetition and try to wrap this on a function and a for loop 
+# I do not want to have this same thing 100 times
+# Also, let's think if we can come up with something cooler to do this, something that looks nicer
+
+# sex for qc
+st.subheader('Create "biological_sex_for_qc"')
+st.text('Count per sex group')
+st.write(data.sex.value_counts())
+
+sexes=data.sex.dropna().unique()
+n_sexes = st.columns(len(sexes))
+mapdic={}
+for i, x in enumerate(n_sexes):
+    with x:
+        sex = sexes[i]
+        mapdic[sex]=x.selectbox(f"[{sex}]: For QC, please pick a word below",
+                            ["Male", "Female","Intersex","Unnown"], key=i)
+data['sex_qc'] = data.sex.replace(mapdic)
+
+# cross-tabulation
+st.text('=== sex_qc x sex ===')
+xtab = data.pivot_table(index='sex_qc', columns='sex', margins=True,
+                        values='sample_id', aggfunc='count', fill_value=0)
+st.write(xtab)
+
+sex_conf = st.checkbox('Confirm sex_qc?')
+if sex_conf:
+    st.info('Thank you')
 
 
