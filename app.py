@@ -20,6 +20,13 @@ def jumptwice():
     st.write("##")
 
 
+def columnize( itemlist ):
+    NEWLINE_DASH = ' \n- '
+    if len(itemlist) > 1:
+        return f"- {itemlist[0]}{NEWLINE_DASH.join(itemlist[1:])}"
+    else:
+        return f"- {itemlist[0]}"
+
 def validate_table(table: pd.DataFrame, table_name: str, CDE: pd.DataFrame):
 
     retval = 1
@@ -41,12 +48,14 @@ def validate_table(table: pd.DataFrame, table_name: str, CDE: pd.DataFrame):
     missing_required_fields = [field for field in required_fields if field not in table.columns]
     
     if missing_required_fields:
-        st.error(f"\tMissing Required Fields in {table_name}: {', '.join(missing_required_fields)}")
+        st.error(f"Missing Required Fields in {table_name}: {', '.join(missing_required_fields)}")
     else:
-        st.text(f"\tAll required fields are present in {table_name}.")
-        
+        st.markdown(f"All required fields are present in *{table_name}* table.")
+
     jumptwice()
     # Check for empty or NaN values
+    empty_fields = []
+    total_rows = table.shape[0]
     for test_field,test_name in zip([required_fields, optional_fields], ["Required", "Optional"]):
         empty_or_nan_fields = {}
         for field in test_field:
@@ -56,30 +65,64 @@ def validate_table(table: pd.DataFrame, table_name: str, CDE: pd.DataFrame):
                     empty_or_nan_fields[field] = invalid_count
                     
         if empty_or_nan_fields:
-            st.error(f"\t\t{test_name} Fields with Empty or NaN values:")
+            st.error(f"{test_name} Fields with Empty (nan) values:")
+            # st.write(empty_or_nan_fields)
             for field, count in empty_or_nan_fields.items():
-                st.text(f"\t\t\t- {field}: {count} rows")
+                st.markdown(f"- {field}: {count}/{total_rows} empty rows")
             retval = 0
         else:
-            st.text(f"No empty or NaN values found in {test_name} fields.")
+            st.markdown(f"No empty entries (Nan) found in _{test_name}_ fields.")
     
-    jumptwice()
     # Check for invalid Enum field values
     invalid_field_values = {}
+    valid_field_values = {}
+
+    invalid_fields = []
+    invalid_nan_fields = []
     for field, validation_str in enum_fields_dict.items():
         valid_values = eval(validation_str)
         if field in table.columns:
             invalid_values = table[~table[field].isin(valid_values)][field].unique()
             if invalid_values.any():
-                invalid_field_values[field] = invalid_values
-    
+
+                if 'Nan' in invalid_values:
+                    invalid_nan_fields.append(field)
+        
+                invalids = [x for x in invalid_values if x != 'Nan' ]
+                if len(invalids)>0:
+                    invalid_fields.append(field)    
+                    invalid_field_values[field] = invalids
+                    valid_field_values[field] = valid_values
+                
+
+
+    jumptwice()
     if invalid_field_values:
-        st.error("\tInvalid Field/Value pairs:")
+        st.subheader("Enums")
+        st.error("Invalid entries")
+        # tmp = {key:value for key,value in invalid_field_values.items() if key not in invalid_nan_fields}
+        # st.write(tmp)
+
         for field, values in invalid_field_values.items():
-            st.text(f"\t\t\t- {field}: {', '.join(map(str, values))}")
+            if field in invalid_fields:
+                st.markdown(f"- {field}:{', '.join(map(str, values))}")
+                st.markdown(f"> change to: {', '.join(map(str, valid_field_values[field]))}")
+
+        if len(invalid_nan_fields) > 0:
+            st.error("Found unexpected NULL (nan):")
+            st.markdown(columnize(invalid_nan_fields))
+
+        
         retval = 0
+        # if len(invalid_fields) > 0:
+        #     st.text('First 10 entries invalid entries')
+        #     st.write(table[invalid_fields].head(10))
+        # if len(invalid_nan_fields) > 0:
+        #     st.markdown('First 10 entries invalid _empty_ entries')
+        #     st.write(table[invalid_nan_fields].head(10))
+
     else:
-        st.text(f"\tAll Enum fields have valid values in {table_name}.")
+        st.text(f"All Enum fields have valid values in {table_name}. 🥳")
 
     return retval
 
@@ -109,18 +152,6 @@ def force_enum_string(df, df_name, CDE):
 
 
 
-# Show template that ppl must fill in 
-# We can split the template in chunks and process each template sepparatedly if we like
-# As this is just the beginning, let's keep it simple and process all data on a single app. Then, we can easily make it nicer
-
-
-
-# # Define optional columns
-# optional_cols = ["PI_ORCHID", "PI_google_scholar_id", "metadata_version_date", "primary_diagnosis_text",
-#                  "preprocessing_references", "DV200" , "pm_PH", "donor_id", "other_reference", "smoking_years",
-#                  "path_autopsy_second_dx", "path_autopsy_third_dx", "path_autopsy_fourth_dx" "path_autopsy_fifth_dx",
-#                  "path_autopsy_sixth_dx", "path_autopsy_seventh_dx" "path_autopsy_eight_dx"]
-
 
 # Provide template
 st.markdown('<p class="big-font"> ASAP single cell data fields self-QC </p>', unsafe_allow_html=True)
@@ -132,7 +163,8 @@ st.markdown('[Access the data dictionary and template](https://docs.google.com/s
 
 # Read file from streamlit and create a copy to do the maps
 data_file = st.sidebar.file_uploader("Upload Your meta-tables (SAMPLE.csv, STUDY.csv, PROTOCOL.csv, CLINPATH.csv, and/or SUBJECT.csv)", type=['xlsx', 'csv'],accept_multiple_files=True)
-if data_file is None: 
+
+if data_file is None or len(data_file)==0: 
     st.stop()
 elif len(data_file)>1:
     table = [dat_f.name.split('.')[0] for dat_f in data_file]
@@ -149,18 +181,15 @@ CDE_df = pd.read_csv(cde_file_path)
 
 for table_name,dat in zip(table,data):
 
-    st.subheader(f"## {table_name} ({table_name}.csv)")
+    st.header(f"{table_name} ({table_name}.csv)")
     # data_file = "https://docs.google.com/spreadsheets/d/1xjxLftAyD0B8mPuOKUp5cKMKjkcsrp_zr9yuVULBLG8/edit?usp=sharing"
     # Load the CDE.csv file and the reference table
 
     retval = validate_table(dat, table_name, CDE_df)
     if retval == 0:
-        st.error(f"## {table_name} FAILED !!!!!!!!!!")
-        st.text('First 30 entries with missing data in any required fields')
-        st.write(dat.head(30))
-#     st.text('First 30 entries with missing data in any required fields')
-#     st.write(data_non_miss_check[data_non_miss_check.isna().sum(1)>0].head(30))
+        st.error(f"{table_name} FAILED ! \n Please try again 😃")
 
+    st.divider()
 
 
 # Check all columns are present in the input 
