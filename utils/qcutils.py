@@ -1,12 +1,15 @@
 # imports
-import streamlit as st
 import pandas as pd
 
-from utils.io import read_file, pub_md, pub_error, pub_subheader, pub_header, pub_divider, columnize, jumptwice
+from .io import ReportCollector, columnize
 
 
+def validate_table(table: pd.DataFrame, table_name: str, CDE: pd.DataFrame, out: ReportCollector):
+    """
+    Validate a table against the CDE, and log results to streamlit (outp="streamlit") or to a 
+    log file (outp="logging" or both (outp="both"|"all")
+    """
 
-def validate_table(table: pd.DataFrame, table_name: str, CDE: pd.DataFrame):
 
     retval = 1
 
@@ -27,11 +30,10 @@ def validate_table(table: pd.DataFrame, table_name: str, CDE: pd.DataFrame):
     missing_required_fields = [field for field in required_fields if field not in table.columns]
     
     if missing_required_fields:
-        pub_error(f"Missing Required Fields in {table_name}: {', '.join(missing_required_fields)}")
+        out.add_error(f"Missing Required Fields in {table_name}: {', '.join(missing_required_fields)}")
     else:
-        pub_md(f"All required fields are present in *{table_name}* table.")
+        out.add_markdown(f"All required fields are present in *{table_name}* table.")
 
-    jumptwice()
     # Check for empty or NaN values
     empty_fields = []
     total_rows = table.shape[0]
@@ -44,13 +46,12 @@ def validate_table(table: pd.DataFrame, table_name: str, CDE: pd.DataFrame):
                     empty_or_nan_fields[field] = invalid_count
                     
         if empty_or_nan_fields:
-            pub_error(f"{test_name} Fields with Empty (nan) values:")
-            # st.write(empty_or_nan_fields)
+            out.add_error(f"{test_name} Fields with Empty (nan) values:")
             for field, count in empty_or_nan_fields.items():
-                pub_md(f"- {field}: {count}/{total_rows} empty rows")
+                out.add_markdown(f"- {field}: {count}/{total_rows} empty rows")
             retval = 0
         else:
-            pub_md(f"No empty entries (Nan) found in _{test_name}_ fields.")
+            out.add_markdown(f"No empty entries (Nan) found in _{test_name}_ fields.")
     
     # Check for invalid Enum field values
     invalid_field_values = {}
@@ -75,33 +76,25 @@ def validate_table(table: pd.DataFrame, table_name: str, CDE: pd.DataFrame):
                 
 
 
-    jumptwice()
     if invalid_field_values:
-        pub_subheader("Enums")
-        pub_error("Invalid entries")
+        out.add_subheader("Enums")
+        out.add_error("Invalid entries")
         # tmp = {key:value for key,value in invalid_field_values.items() if key not in invalid_nan_fields}
         # st.write(tmp)
 
         for field, values in invalid_field_values.items():
             if field in invalid_fields:
-                pub_md(f"- {field}:{', '.join(map(str, values))}")
-                pub_md(f"> change to: {', '.join(map(str, valid_field_values[field]))}")
+                out.add_markdown( f"- {field}:{', '.join(map(str, values))}" )
+                out.add_markdown( f"> change to: {', '.join(map(str, valid_field_values[field]))}" )
 
         if len(invalid_nan_fields) > 0:
-            pub_error("Found unexpected NULL (nan):")
-            pub_md(columnize(invalid_nan_fields))
-
+            out.add_error("Found unexpected NULL (nan):")
+            out.add_markdown(columnize(invalid_nan_fields))
         
         retval = 0
-        # if len(invalid_fields) > 0:
-        #     st.text('First 10 entries invalid entries')
-        #     st.write(table[invalid_fields].head(10))
-        # if len(invalid_nan_fields) > 0:
-        #     pub_md('First 10 entries invalid _empty_ entries')
-        #     st.write(table[invalid_nan_fields].head(10))
 
     else:
-        pub_md(f"All Enum fields have valid values in {table_name}. 🥳")
+        out.add_subheader(f"Enum fields have valid values in {table_name}. 🥳")
 
     return retval
 
@@ -119,9 +112,6 @@ def force_enum_string(df, df_name, CDE):
     # Convert the specified columns to string data type using astype() without a loop
     columns_to_convert = {col: 'str' for col in string_enum_fields if col in df.columns}
     df = df.astype(columns_to_convert)
-
-    # enum_fields = CDE[ (CDE["Table"] == df_name) & 
-    #                             (CDE["DataType"]=="Enum") ]["Field"].tolist()
     
     for col in string_enum_fields:
         if col in df.columns and col not in ["assay", "file_type"]:

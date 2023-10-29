@@ -1,54 +1,75 @@
 # imports
 import streamlit as st
 import pandas as pd
-import logging
-from utils.qcutils import *
 import datetime as dt
 
 
-# Step 1: Create a custom logging handler
-class StringHandler(logging.Handler):
-    def __init__(self):
-        super().__init__()
-        self.log_content = ""
+class ReportCollector:
+    def __init__(self, destination="both"):
+        self.entries = []
+        self.filename = None
 
-    def emit(self, record):
-        msg = self.format(record)
-        self.log_content += msg + '\n'
+        if destination in ["both", "streamlit"]:
+            self.publish_to_streamlit = True
+        else:
+            self.publish_to_streamlit = False
 
-# Define some custom functions
-def read_file(data_file):
-    if data_file.type == "text/csv":
-        df = pd.read_csv(data_file)
-    elif data_file.type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
-        df = pd.read_excel(data_file, sheet_name=0)
-    return (df)
 
-# def to_log(df):
-#     """It returns an excel object sheet with the QC sample manifest
-#     and clinical data written in separate
-#     """
-#     today = dt.datetime.today()
-#     version = f'{today.year}{today.month}{today.day}'
-#     study_code = df.study.unique()[0]
-#     ext = "log"
+    def add_markdown(self, msg):
+        self.entries.append(("markdown", msg))
+        if self.publish_to_streamlit:
+            st.markdown(msg)
+
+
+    def add_error(self, msg):
+        self.entries.append(("error", msg))
+        if self.publish_to_streamlit:
+            st.error(msg)
+
+    def add_header(self, msg):
+        self.entries.append(("header", msg))
+        if self.publish_to_streamlit:    
+            st.header(msg)
+
+    def add_subheader(self, msg):
+        self.entries.append(("subheader", msg))
+        if self.publish_to_streamlit:    
+            st.subheader(msg)
+
+    def add_divider(self):
+        self.entries.append(("divider", None))
+        if self.publish_to_streamlit:    
+            st.divider()
+
     
-#     filename = "{s}_clinial_data_selfQC_{v}.{e}".format(s=study_code, v = version, e = ext)
+    def write_to_file(self, filename):
+        self.filename = filename
+        with open(filename, 'w') as f:
+            report_content = self.get_log()
+            f.write(report_content)
     
-#     output = BytesIO()
-#     writer = pd.ExcelWriter(output, engine='xlsxwriter')
-#     df.to_excel(writer, index=False, sheet_name='sample_manifest')
-#     writer.save()
-#     processed_data = output.getvalue()
-#     return processed_data, filename
 
+    def get_log(self):
+        """ grab logged information from the log file."""
+        report_content = []
+        for msg_type, msg in self.entries:
+            if msg_type == "markdown":
+                report_content += msg + '\n'
+            elif msg_type == "error":
+                report_content += f"🚨⚠️❗ **{msg}**\n"
+            elif msg_type == "header":
+                report_content += f"# {msg}\n"
+            elif msg_type == "subheader":
+                report_content += f"## {msg}\n"
+            elif msg_type == "divider":
+                report_content += 60*'-' + '\n'
+        
+        return "".join(report_content)
 
-def setup_logging(log_file):
-    """Configure logging settings."""
-    logging.basicConfig(filename=log_file,
-                        level=logging.INFO)
-    # ,
-    #                     format='%(asctime)s - %(levelname)s - %(message)s')
+    def reset(self):
+        self.entries = []
+        self.filename = None
+
 
 def get_log(log_file):
     """ grab logged information from the log file."""
@@ -56,48 +77,23 @@ def get_log(log_file):
         report_content = f.read()
     return report_content
 
-
-def pub_md( msg, to_log=True):
-    """Wrapper to print to screen and log file."""
-    st.markdown(msg)
-    if to_log:
-        logging.info(msg)
-
-def pub_error( msg, to_log=True):
-    """Wrapper to print to screen and log file."""
-    st.error(msg)
-    if to_log:
-        # logging.error(f"> :warning: **{msg}**")    
-        logging.error(f"[!WARNING] **{msg}**")
-
-
-def pub_subheader( msg, to_log=True):
-    """Wrapper to print to screen and log file formatted as subheader."""
-    st.subheader(msg)
-    if to_log:
-        logging.info(f"## {msg}")
-
-def pub_header( msg, to_log=True):
-    """Wrapper to print to screen and log file formatted as a header."""
-    st.header(msg)
-    if to_log:
-        logging.info(f"# {msg}")
-
-def pub_divider( to_log=True):
-    """Wrapper to print a divider to screen and log file."""
-    st.divider()
-    if to_log:
-        logging.info(60*"-")
-
-
-def jumptwice():
-    pub_md("##")
-    pub_md("##")
-
-
 def columnize( itemlist ):
     NEWLINE_DASH = ' \n- '
     if len(itemlist) > 1:
         return f"- {itemlist[0]}{NEWLINE_DASH.join(itemlist[1:])}"
     else:
         return f"- {itemlist[0]}"
+    
+
+    # Define some custom functions
+def read_file(data_file):
+    if data_file.type == "text/csv":
+        df = pd.read_csv(data_file)
+    elif data_file.type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
+        df = pd.read_excel(data_file, sheet_name=0)
+    return (df)
+
+
+def load_css(file_name):
+   with open(file_name) as f:
+      st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)

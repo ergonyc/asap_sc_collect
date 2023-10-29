@@ -2,28 +2,26 @@
 import streamlit as st
 import pandas as pd
 from utils.qcutils import validate_table
-from utils.io import setup_logging, get_log, read_file, pub_header, pub_error, pub_divider
+from utils.io import ReportCollector, read_file, load_css
 import time
+
+
 
 LOG_NAME = "report.md"
 
 
-
-
-
+load_css("css/css.css")
 # Provide template
-st.markdown('<p class="big-font"> ASAP single cell data fields self-QC </p>', unsafe_allow_html=True)
+st.markdown('<p class="big-font"> ASAP single cell data self-QC app</p>', unsafe_allow_html=True)
 st.markdown('<p class="medium-font"> This app is intended to make sure ASAP contributing with single cell data provide standard ASAP required fields </p>', unsafe_allow_html=True)
-st.markdown('<p class="medium-font"> Download the template from the link below. Once you open the link, go to "File"> "Download" > "xlsx" or "csv" format </p>', unsafe_allow_html=True)
 st.markdown('[Access the data dictionary and template](https://docs.google.com/spreadsheets/d/1xjxLftAyD0B8mPuOKUp5cKMKjkcsrp_zr9yuVULBLG8/edit?usp=sharing)', unsafe_allow_html=True)
 
 
 
 # Read file from streamlit and create a copy to do the maps
 data_file = st.sidebar.file_uploader("Upload Your meta-tables (SAMPLE.csv, STUDY.csv, PROTOCOL.csv, CLINPATH.csv, and/or SUBJECT.csv)", type=['xlsx', 'csv'],accept_multiple_files=True)
+# datamaps_copy = [dat.copy() for dat in data]
 
-
-setup_logging(LOG_NAME)
 
 
 if data_file is None or len(data_file)==0: 
@@ -36,56 +34,63 @@ elif len(data_file)>0:
 #     data = [read_file(data_file[0])]
 
 
-# datamaps_copy = [dat.copy() for dat in data]
+
 # Construct the path to CSD.csv
 cde_file_path = "ASAP_CDE.csv"
 CDE_df = pd.read_csv(cde_file_path)
 
+
+out = ReportCollector()
+
+
 confirm_table = {}
 for table_name,dat in zip(tables,data):
 
-    pub_header(f"{table_name} ({table_name}.csv)")
+    out.add_header(f"{table_name} table ({table_name}.csv)")
     # data_file = "https://docs.google.com/spreadsheets/d/1xjxLftAyD0B8mPuOKUp5cKMKjkcsrp_zr9yuVULBLG8/edit?usp=sharing"
     # Load the CDE.csv file and the reference table
 
-    retval = validate_table(dat, table_name, CDE_df)
+    # TODO: check order of columns
+
+    retval = validate_table(dat, table_name, CDE_df, out)
+
     if retval == 0:
-        pub_error(f"{table_name} FAILED ! \n Please try again 😃")
+        out.add_error(f"{table_name} table validation FAILED!! 👎 Please try again.")
 
     confirm_table[table_name] = st.checkbox(f'Confirm {table_name}?')
     if confirm_table[table_name]:
         st.info('Thank you')
 
-    pub_divider()
+    out.add_divider()
 
 
 
 if st.button("Finished?"):
     #if not (clinical_conf & ph_conf & sex_conf & race_conf & fh_conf & rg_conf):
     if not all([confirm_table[tab] for tab in tables]):
-        pub_error('Did you forget to confirm any of the steps above?')
-        pub_error("Please, tick all the boxes on the previous steps if the QC to meet GP2 standard format was successful")
+        out.add_error('Did you forget to confirm any of the steps above?')
+        out.add_error("Please, tick all the boxes on the previous steps if the QC to meet GP2 standard format was successful")
     else:
-       
         # Generate log for download
         st.markdown('<p class="medium-font"> You have _confirmed_ your meta-data package meets all the ASAP CRN requirements. </p>', unsafe_allow_html=True )
         
-        report_content = get_log(LOG_NAME)
-        
-
-        #from streamlit import caching
-        # from streamlit.runtime import legacy_caching
-
-        # st.runtime.legacy_caching.clear_cache()
+        report_content = out.get_log()
 
         #from streamlit.scriptrunner import RerunException
         def cach_clean():
             time.sleep(1)
             st.runtime.legacy_caching.clear_cache()
 
-
         # Download button
-        st.download_button('📥 Download your QC log', data=report_content, file_name='report.md', mime='text/markdown')
+        st.download_button('📥 Download your QC log', data=report_content, file_name=LOG_NAME, mime='text/markdown')
+
+
+
+
+
+
+
+
 
 # Check all columns are present in the input 
 # We can do something such as checking the number of columns matches what we would expect ( a bit unsafe tho)

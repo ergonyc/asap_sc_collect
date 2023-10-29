@@ -12,14 +12,11 @@
 <!-- PROJECT LOGO -->
 <br />
 <div align="center">
-  <a href="https://github.com/AMCalejandro/gp2-manifest-checkupload/tree/main/">
-    <img src="apps/img/GP2_logo_color.png" alt="Logo" width="600" height="200">
-  </a>
 
-  <h3 align="center">GP2 CIWG data QC - Upload - Visualise app</h3>
+  <h3 align="center">ASAP CRN Cloud Platform data QC app</h3>
 
   <p align="center">
-    An app that allows you to QC your data, then upload it to GP2 system. You will also be able to visualise your data
+    An app that allows you to QC your data
     <br />
     <br />
   </p>
@@ -98,7 +95,6 @@ Here, I summarise some points to efficiently use the app.
 
 * Docker installed
 * Python3.9 or higher
-* Access to the GCP project in which the app is hosted
 
 
 ### Installation 
@@ -142,12 +138,7 @@ streamlit run app.py
 <!-- USAGE EXAMPLES -->
 ## Usage
 
-Use the navigation bar at the top of the app to move around the tabs available on the app. 
-
-Once you upload the data to either the sample manifest or the clinical data tabs, you should be able to follow along and understand how the app is intended to help you harmonising your data to GP2 standards.
-
-Same way, you should be able to easily upload your data the storage system and the visualization tabs and follow along.
-
+Load your metadata tables, and generate a report
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
