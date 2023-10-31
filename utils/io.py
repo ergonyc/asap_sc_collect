@@ -90,6 +90,8 @@ class ReportCollector:
         self.entries = []
         self.filename = None
 
+    def print_log(self):
+        print(self.get_log())
 
 def get_log(log_file):
     """ grab logged information from the log file."""
@@ -105,10 +107,7 @@ def columnize( itemlist ):
         return f"- {itemlist[0]}"
     
 
-
-
-
-      # Function to read a table with the specified data types
+# Function to read a table with the specified data types
 def read_meta_table(table_path,dtypes_dict):
     table_df = pd.read_csv(table_path, dtype=dtypes_dict)
     return table_df
