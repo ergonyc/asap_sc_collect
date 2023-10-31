@@ -4,12 +4,11 @@ import pandas as pd
 from .io import ReportCollector, columnize
 
 
-def validate_table(table: pd.DataFrame, table_name: str, CDE: pd.DataFrame, out: ReportCollector):
+def validate_table(table_in: pd.DataFrame, table_name: str, CDE: pd.DataFrame, out: ReportCollector):
     """
     Validate a table against the CDE, and log results to streamlit (outp="streamlit") or to a 
     log file (outp="logging" or both (outp="both"|"all")
     """
-
 
     retval = 1
 
@@ -24,7 +23,8 @@ def validate_table(table: pd.DataFrame, table_name: str, CDE: pd.DataFrame, out:
     required_fields = specific_cde_df[specific_cde_df['Required'] == "Required"]['Field'].tolist()
     optional_fields = specific_cde_df[specific_cde_df['Required'] == "Optional"]['Field'].tolist()
 
-    table = force_enum_string(table, table_name, CDE)
+    # table returns a copy of the table with the specified columns converted to string data type
+    table = force_enum_string(table_in, table_name, CDE)
 
     # Check for missing "Required" fields
     missing_required_fields = [field for field in required_fields if field not in table.columns]
@@ -48,7 +48,7 @@ def validate_table(table: pd.DataFrame, table_name: str, CDE: pd.DataFrame, out:
         if empty_or_nan_fields:
             out.add_error(f"{test_name} Fields with Empty (nan) values:")
             for field, count in empty_or_nan_fields.items():
-                out.add_markdown(f"- {field}: {count}/{total_rows} empty rows")
+                out.add_markdown(f"\n\t- {field}: {count}/{total_rows} empty rows")
             retval = 0
         else:
             out.add_markdown(f"No empty entries (Nan) found in _{test_name}_ fields.")
@@ -105,8 +105,9 @@ def capitalize_first_letter(s):
         return s
     return s[0].upper() + s[1:]
 
-def force_enum_string(df, df_name, CDE):
-
+def force_enum_string(df_in:pd.DataFrame, df_name:str, CDE:pd.DataFrame) -> pd.DataFrame:
+    """helper to force Enum columns to string data type, and force capitalization of first letters"""
+    df = df_in.copy()
     string_enum_fields = CDE[(CDE["Table"] == df_name) & 
                                 (CDE["DataType"].isin(["Enum", "String"]))]["Field"].tolist()
     # Convert the specified columns to string data type using astype() without a loop
@@ -118,3 +119,19 @@ def force_enum_string(df, df_name, CDE):
             df[col] = df[col].apply(capitalize_first_letter)
 
     return df
+
+def reorder_table_to_CDE(df: pd.DataFrame, df_name:str, CDE: pd.DataFrame) -> pd.DataFrame:
+    """ convert table to CDE field order and create empty columns for missing fields"""
+    col_order = CDE[CDE["Table"]==df_name].Field.tolist()
+    
+    df_out = pd.DataFrame()
+
+    for col in col_order:
+        if col in df.columns:   
+            df_out[col] = df[col]
+        else:
+            df_out[col] = ""
+
+    return df_out
+
+

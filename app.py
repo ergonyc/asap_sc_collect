@@ -23,21 +23,19 @@ data_file = st.sidebar.file_uploader("Upload Your meta-tables (SAMPLE.csv, STUDY
 # datamaps_copy = [dat.copy() for dat in data]
 
 
+# Construct the path to CSD.csv
+cde_file_path = "ASAP_CDE.csv"
+CDE_df = pd.read_csv(cde_file_path)
+
 
 if data_file is None or len(data_file)==0: 
     st.stop()
 elif len(data_file)>0:
     tables = [dat_f.name.split('.')[0] for dat_f in data_file]
-    data = [ read_file(dat_f) for dat_f in data_file]
-# else:
-#     table = [data_file[0].name.split('.')]
-#     data = [read_file(data_file[0])]
-
-
-
-# Construct the path to CSD.csv
-cde_file_path = "ASAP_CDE.csv"
-CDE_df = pd.read_csv(cde_file_path)
+    data = [ read_file(dat_f,CDE_df) for dat_f in data_file]
+else: # should be impossible
+    st.error('Something went wrong with the file upload. Please try again.')
+    st.stop()
 
 
 out = ReportCollector()

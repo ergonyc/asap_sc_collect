@@ -1,7 +1,27 @@
 # imports
-import streamlit as st
 import pandas as pd
-import datetime as dt
+
+# wrape this in try/except to make suing the ReportCollector portable
+# probably an abstract base class would be better
+try:
+    import streamlit as st
+    print("Streamlit imported successfully")
+
+except ImportError:
+    class DummyStreamlit:
+        @staticmethod
+        def markdown(self,msg):
+            pass
+        def error(self,msg):
+            pass
+        def header(self,msg):
+            pass        
+        def subheader(self,msg):
+            pass    
+        def divider(self):
+            pass
+    st = DummyStreamlit()
+    print("Streamlit NOT successfully")
 
 
 class ReportCollector:
@@ -85,15 +105,48 @@ def columnize( itemlist ):
         return f"- {itemlist[0]}"
     
 
-    # Define some custom functions
-def read_file(data_file):
-    if data_file.type == "text/csv":
-        df = pd.read_csv(data_file)
-    elif data_file.type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
-        df = pd.read_excel(data_file, sheet_name=0)
-    return (df)
 
+
+
+      # Function to read a table with the specified data types
+def read_meta_table(table_path,dtypes_dict):
+    table_df = pd.read_csv(table_path, dtype=dtypes_dict)
+    return table_df
+
+# Function to get data types dictionary for a given table
+def get_dtypes_dict(cde_df):
+    # unnescessary.
+    # # Filter the CDE data frame to get the fields and data types for the specified table
+    # table_cde = cde_df[cde_df["Table"] == table_name]
+    
+    # Initialize the data types dictionary
+    dtypes_dict = {}
+    
+    # Iterate over the rows to fill the dictionary
+    for _, row in cde_df.iterrows():
+        field_name = row["Field"]
+        data_type = row["DataType"]
+        
+        # Set the data type to string for "String" and "Enum" fields
+        if data_type in ["String", "Enum"]:
+            dtypes_dict[field_name] = str
+    
+    return dtypes_dict
+
+
+# streamlit specific helpers which don't depend on streamlit
 
 def load_css(file_name):
    with open(file_name) as f:
       st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
+
+# Define some custom functions
+def read_file(data_file,dtypes_dict):
+    if data_file.type == "text/csv":
+        df = pd.read_csv(data_file) #, dtype=dtypes_dict)        
+        # df = read_meta_table(table_path,dtypes_dict)
+    # assume that the xlsx file remembers the dtypes
+    elif data_file.type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
+        df = pd.read_excel(data_file, sheet_name=0)
+    return (df)
+
