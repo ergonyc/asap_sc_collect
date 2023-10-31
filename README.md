@@ -74,8 +74,6 @@ Here I summarise the main software we have used to build the app
 
 * [![Docker][do-shield]][do-url]
 
-* [![GCP][gcp-shield]][gcp-url]
-
 
 
 
@@ -85,6 +83,7 @@ Here I summarise the main software we have used to build the app
 <!-- GETTING STARTED -->
 ## Getting Started
 
+Try it out deployed via [streamlit] (https://asap-meta-qc.streamlit.app/)
 Here, I summarise some points to efficiently use the app.
 * To perform clinical data QC and then visualise, please make sure you QC and upload the sample manifest for your samples
 * If your are QC ing several sample manifests at a time, please refresh the app between sample manifests. The  app makes use of something called streamlit session state to propagate data across apps, you need to release the cache between sample manifests first.
