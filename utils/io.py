@@ -106,11 +106,15 @@ def columnize( itemlist ):
     else:
         return f"- {itemlist[0]}"
     
-
 # Function to read a table with the specified data types
 def read_meta_table(table_path,dtypes_dict):
-    table_df = pd.read_csv(table_path, dtype=dtypes_dict)
+    # read the whole table
+    table_df = pd.read_csv(table_path,dtype=dtypes_dict)
+    # drop the first column if it is just the index
+    if table_df.columns[0] == "Unnamed: 0":
+        table_df = table_df.drop(columns=["Unnamed: 0"])
     return table_df
+
 
 # Function to get data types dictionary for a given table
 def get_dtypes_dict(cde_df):
