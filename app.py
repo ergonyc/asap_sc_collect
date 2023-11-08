@@ -45,7 +45,7 @@ LOG_NAME = "report.md"
 
 st.set_page_config(
     page_title='ASAP CRN metadata data QC',
-    page_icon="🧊",
+    page_icon="✅",
     layout="wide",
     initial_sidebar_state="expanded",
     menu_items={
