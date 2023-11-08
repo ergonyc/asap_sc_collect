@@ -81,11 +81,16 @@ def validate_table(table_in: pd.DataFrame, table_name: str, CDE: pd.DataFrame, o
         out.add_error("Invalid entries")
         # tmp = {key:value for key,value in invalid_field_values.items() if key not in invalid_nan_fields}
         # st.write(tmp)
-
+        def my_str(x):
+            return f"'{str(x)}'"
+            
         for field, values in invalid_field_values.items():
             if field in invalid_fields:
-                out.add_markdown( f"- {field}:{', '.join(map(str, values))}" )
-                out.add_markdown( f"> change to: {', '.join(map(str, valid_field_values[field]))}" )
+                str_out = f"- _*{field}*_:  invalid values 💩{', '.join(map(my_str, values))}\n"
+                str_out += f"    - valid ➡️ {', '.join(map(my_str, valid_field_values[field]))}"
+                out.add_markdown(str_out)
+                # out.add_markdown( f"- {field}: invalid values {', '.join(map(str, values))}" )
+                # out.add_markdown( f"- change to: {', '.join(map(my_str, valid_field_values[field]))}" )
 
         if len(invalid_nan_fields) > 0:
             out.add_error("Found unexpected NULL (<NA> or NaN):")

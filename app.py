@@ -170,21 +170,30 @@ def main():
     # if sex_conf:
     #     st.info('Thank you')
 
-
+    retval = 1
     if retval == 1:
-        st.markdown('<p class="medium-font"> You have <it>confirmed</it> your meta-data package meets all the ASAP CRN requirements. </p>', unsafe_allow_html=True )
+        # st.markdown('<p class="medium-font"> You have <it>confirmed</it> your meta-data package meets all the ASAP CRN requirements. </p>', unsafe_allow_html=True )
         #from streamlit.scriptrunner import RerunException
         def cach_clean():
             time.sleep(1)
             st.runtime.legacy_caching.clear_cache()
 
-        print(report)
-        # Download button
-        csv = df.to_csv(index=False).encode('utf-8')
-        st.download_button('📥 Download your QC log', data=csv, file_name=LOG_NAME, mime='text/markdown')
+        report_content = report.get_log()
 
-    else:
-        st.sidebar.error("Please validate data first.")
+        #from streamlit.scriptrunner import RerunException
+        def cach_clean():
+            time.sleep(1)
+            st.runtime.legacy_caching.clear_cache()
+
+        # Download button
+        st.download_button('📥 Download your QC log', data=report_content, file_name=f"{table_choice}.md", mime='text/markdown')
+
+
+        # print(report)
+        # # Download button
+        # csv = df.to_csv(index=False).encode('utf-8')
+        # st.download_button('📥 Download your QC log', data=csv, file_name=LOG_NAME, mime='text/markdown')
+
 
 
 if __name__ == "__main__":
@@ -192,7 +201,10 @@ if __name__ == "__main__":
     # Provide template
     st.markdown('<p class="big-font">ASAP scRNAseq </p>', unsafe_allow_html=True)
     st.title('metadata data QC')
-    st.markdown('<p class="medium-font"> This app is intended to make sure ASAP Cloud Platform contributions follow the ASAP CRN CDE convenetions</p>', unsafe_allow_html=True)
+    st.markdown("""<p class="medium-font"> This app is intended to make sure ASAP Cloud 
+                Platform contributions follow the ASAP CRN CDE conventions. </p> 
+                <p> v0.2, updated 07Nov2023. </p> 
+                """, unsafe_allow_html=True)
     st.markdown('[CDE v0.1](https://docs.google.com/spreadsheets/d/1xjxLftAyD0B8mPuOKUp5cKMKjkcsrp_zr9yuVULBLG8/edit?usp=sharing)')
 
     main()
