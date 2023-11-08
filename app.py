@@ -1,3 +1,21 @@
+"""
+ASAP scRNAseq metadata data QC
+
+
+https://github.com/asap_sc_collect
+
+v0.2
+20 August 2023
+
+Author:
+    @ergonyc : https://github.com/ergonyc
+
+Contributors:
+    @AMCalejandro : https://github.com/AMCalejandro
+
+"""
+
+
 # conda create -n sl11 python=3.11 pip streamlit pandas numpy great-expectations
 
 
@@ -12,13 +30,6 @@ from utils.qcutils import validate_table
 from utils.io import ReportCollector, read_file, load_css,get_dtypes_dict
 
 
-# invalid_df = pd.DataFrame({
-#     "year": ["2001", "2002", "1999"],
-#     "month": ["3", "6", "12"],
-#     "day": ["200", "156", "365"],
-# })
-
-# transform(invalid_df)
 
 # we use this as data location
 DATA_PATH_URL = "/Users/ergonyc/Projects/ASAP/meta-clean/clean"
@@ -30,10 +41,21 @@ DOWNLOAD = "download report"
 
 LOG_NAME = "report.md"
 
+# Initial page config
+
+st.set_page_config(
+    page_title='ASAP CRN metadata data QC',
+    page_icon="🧊",
+    layout="wide",
+    initial_sidebar_state="expanded",
+    menu_items={
+        'Get help': "https://github.com/ergonyc/asap_sc_collect",
+        'Report a bug': "mailto:henrie@datatecnica.com",
+        'About': "# This is a header. This is an *extremely* cool app!"
+    }
+)
+
 load_css("css/css.css")
-
-
-
 
 # Define some custom functions
 def read_file(data_file,dtypes_dict):
@@ -46,15 +68,10 @@ def read_file(data_file,dtypes_dict):
     return (df)
 
 
-# @st.cache
-# def general_ge_check(df):
-#     context = ge.data_context.DataContext()
-#     return context
-
-
-# Download files and make its content available as a string.
+# TODO: set up dataclasses to hold the data
 @st.cache_data
 def load_data(data_file, dtypes):
+    """Load data from a files and cache it, return a dictionary of dataframe"""
     tables = [dat_f.name.split('.')[0] for dat_f in data_file]
 
     dfs = { dat_f.name.split('.')[0]:read_file(dat_f,dtypes) for dat_f in data_file }
@@ -74,6 +91,7 @@ def setup_report_data(report_dat:dict,table_choice:str, dfs:dict, CDE_df:pd.Data
 
 @st.cache_data
 def read_CDE():
+    """Load CDE from local csv and cache it, return a dataframe and dictionary of dtypes"""
     # Construct the path to CSD.csv
     cde_file_path = "ASAP_CDE.csv"
     CDE_df = pd.read_csv(cde_file_path)
@@ -86,8 +104,17 @@ def read_CDE():
 
 
 def main():
-    # Construct the path to CSD.csv
 
+    # Provide template
+    st.markdown('<p class="big-font">ASAP scRNAseq </p>', unsafe_allow_html=True)
+    st.title('metadata data QC')
+    st.markdown("""<p class="medium-font"> This app is intended to make sure ASAP Cloud 
+                Platform contributions follow the ASAP CRN CDE conventions. </p> 
+                <p> v0.2, updated 07Nov2023. </p> 
+                """, unsafe_allow_html=True)
+    st.markdown('[CDE v0.1](https://docs.google.com/spreadsheets/d/1xjxLftAyD0B8mPuOKUp5cKMKjkcsrp_zr9yuVULBLG8/edit?usp=sharing)')
+
+    # Load CDE from local csv
     CDE_df, dtypes_dict = read_CDE()
 
     # Once we have the dependencies, add a selector for the app mode on the sidebar.
@@ -131,13 +158,14 @@ def main():
 
 
 
-
+    # initialize the data structure and instance of ReportCollector
     report_dat = setup_report_data(report_dat, table_choice, dfs, CDE_df)
-
-
     report = ReportCollector()
+
+    # unpack data
     df,CDE = report_dat[table_choice]
 
+    # perform the valadation
     retval = validate_table(df, table_choice, CDE, report)
 
     if retval == 0:
@@ -145,30 +173,7 @@ def main():
 
 
     report.add_divider()
-    # # sex for qc
-    # st.subheader('Create "biological_sex_for_qc"')
-    # st.text('Count per sex group')
-    # st.write(data.sex.value_counts())
 
-    # sexes=data.sex.dropna().unique()
-    # n_sexes = st.columns(len(sexes))
-    # mapdic={}
-    # for i, x in enumerate(n_sexes):
-    #     with x:
-    #         sex = sexes[i]
-    #         mapdic[sex]=x.selectbox(f"[{sex}]: For QC, please pick a word below",sexes,key=i)
-    #                             # ["Male", "Female","Intersex","Unnown"], key=i)
-    # data['sex_qc'] = data.sex.replace(mapdic)
-
-    # # cross-tabulation
-    # st.text('=== sex_qc x sex ===')
-    # xtab = data.pivot_table(index='sex_qc', columns='sex', margins=True,
-    #                         values='subject_id', aggfunc='count', fill_value=0)
-    # st.write(xtab)
-
-    # sex_conf = st.checkbox('Confirm sex_qc?')
-    # if sex_conf:
-    #     st.info('Thank you')
 
     retval = 1
     if retval == 1:
@@ -193,18 +198,35 @@ def main():
         # # Download button
         # csv = df.to_csv(index=False).encode('utf-8')
         # st.download_button('📥 Download your QC log', data=csv, file_name=LOG_NAME, mime='text/markdown')
-
+        return None
 
 
 if __name__ == "__main__":
 
-    # Provide template
-    st.markdown('<p class="big-font">ASAP scRNAseq </p>', unsafe_allow_html=True)
-    st.title('metadata data QC')
-    st.markdown("""<p class="medium-font"> This app is intended to make sure ASAP Cloud 
-                Platform contributions follow the ASAP CRN CDE conventions. </p> 
-                <p> v0.2, updated 07Nov2023. </p> 
-                """, unsafe_allow_html=True)
-    st.markdown('[CDE v0.1](https://docs.google.com/spreadsheets/d/1xjxLftAyD0B8mPuOKUp5cKMKjkcsrp_zr9yuVULBLG8/edit?usp=sharing)')
-
     main()
+
+
+    # # sex for qc
+    # st.subheader('Create "biological_sex_for_qc"')
+    # st.text('Count per sex group')
+    # st.write(data.sex.value_counts())
+
+    # sexes=data.sex.dropna().unique()
+    # n_sexes = st.columns(len(sexes))
+    # mapdic={}
+    # for i, x in enumerate(n_sexes):
+    #     with x:
+    #         sex = sexes[i]
+    #         mapdic[sex]=x.selectbox(f"[{sex}]: For QC, please pick a word below",sexes,key=i)
+    #                             # ["Male", "Female","Intersex","Unnown"], key=i)
+    # data['sex_qc'] = data.sex.replace(mapdic)
+
+    # # cross-tabulation
+    # st.text('=== sex_qc x sex ===')
+    # xtab = data.pivot_table(index='sex_qc', columns='sex', margins=True,
+    #                         values='subject_id', aggfunc='count', fill_value=0)
+    # st.write(xtab)
+
+    # sex_conf = st.checkbox('Confirm sex_qc?')
+    # if sex_conf:
+    #     st.info('Thank you')
