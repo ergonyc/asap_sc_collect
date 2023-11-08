@@ -88,7 +88,7 @@ def validate_table(table_in: pd.DataFrame, table_name: str, CDE: pd.DataFrame, o
                 out.add_markdown( f"> change to: {', '.join(map(str, valid_field_values[field]))}" )
 
         if len(invalid_nan_fields) > 0:
-            out.add_error("Found unexpected NULL (nan):")
+            out.add_error("Found unexpected NULL (<NA> or NaN):")
             out.add_markdown(columnize(invalid_nan_fields))
         
         retval = 0

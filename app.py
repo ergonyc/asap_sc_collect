@@ -1,148 +1,198 @@
-# imports
-import streamlit as st
+# conda create -n sl11 python=3.11 pip streamlit pandas numpy great-expectations
+
+
+import numpy as np
 import pandas as pd
+import streamlit as st
+import os
+
+from pathlib import Path
+
 from utils.qcutils import validate_table
-from utils.io import ReportCollector, read_file, load_css
-import time
+from utils.io import ReportCollector, read_file, load_css,get_dtypes_dict
 
 
+# invalid_df = pd.DataFrame({
+#     "year": ["2001", "2002", "1999"],
+#     "month": ["3", "6", "12"],
+#     "day": ["200", "156", "365"],
+# })
+
+# transform(invalid_df)
+
+# we use this as data location
+DATA_PATH_URL = "/Users/ergonyc/Projects/ASAP/meta-clean/clean"
+DATA_DEFAULT = "team-Hafler"
+
+LOAD_DATA = "load metadata table(s)"
+VALIDATE = "validate tables"
+DOWNLOAD = "download report"
 
 LOG_NAME = "report.md"
 
-
 load_css("css/css.css")
-# Provide template
-st.markdown('<p class="big-font"> ASAP single cell data self-QC app</p>', unsafe_allow_html=True)
-st.markdown('<p class="medium-font"> This app is intended to make sure ASAP contributing with single cell data provide standard ASAP required fields </p>', unsafe_allow_html=True)
-st.markdown('[Access the data dictionary and template](https://docs.google.com/spreadsheets/d/1xjxLftAyD0B8mPuOKUp5cKMKjkcsrp_zr9yuVULBLG8/edit?usp=sharing)', unsafe_allow_html=True)
 
 
 
-# Read file from streamlit and create a copy to do the maps
-data_file = st.sidebar.file_uploader("Upload Your meta-tables (SAMPLE.csv, STUDY.csv, PROTOCOL.csv, CLINPATH.csv, and/or SUBJECT.csv)", type=['xlsx', 'csv'],accept_multiple_files=True)
-# datamaps_copy = [dat.copy() for dat in data]
+
+# Define some custom functions
+def read_file(data_file,dtypes_dict):
+    if data_file.type == "text/csv":
+        df = pd.read_csv(data_file,dtype=dtypes_dict)        
+        # df = read_meta_table(table_path,dtypes_dict)
+    # assume that the xlsx file remembers the dtypes
+    elif data_file.type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
+        df = pd.read_excel(data_file, sheet_name=0)
+    return (df)
 
 
-# Construct the path to CSD.csv
-cde_file_path = "ASAP_CDE.csv"
-CDE_df = pd.read_csv(cde_file_path)
+# @st.cache
+# def general_ge_check(df):
+#     context = ge.data_context.DataContext()
+#     return context
 
 
-if data_file is None or len(data_file)==0: 
-    st.stop()
-elif len(data_file)>0:
+# Download files and make its content available as a string.
+@st.cache_data
+def load_data(data_file, dtypes):
     tables = [dat_f.name.split('.')[0] for dat_f in data_file]
-    data = [ read_file(dat_f,CDE_df) for dat_f in data_file]
-else: # should be impossible
-    st.error('Something went wrong with the file upload. Please try again.')
-    st.stop()
+
+    dfs = { dat_f.name.split('.')[0]:read_file(dat_f,dtypes) for dat_f in data_file }
+
+    return tables,dfs
+
+@st.cache_data
+def setup_report_data(report_dat:dict,table_choice:str, dfs:dict, CDE_df:pd.DataFrame):
+
+    df = dfs[table_choice]
+    specific_cde_df = CDE_df[CDE_df['Table'] == table_choice]
+
+    dat = (df,specific_cde_df)
+
+    report_dat[table_choice] = dat
+    return report_dat
+
+@st.cache_data
+def read_CDE():
+    # Construct the path to CSD.csv
+    cde_file_path = "ASAP_CDE.csv"
+    CDE_df = pd.read_csv(cde_file_path)
+    dtypes_dict = get_dtypes_dict(CDE_df)
+    return CDE_df, dtypes_dict
+
+# @st.cache_data
+# def convert_df(df):
+#    return df.to_csv(index=False).encode('utf-8')
 
 
-out = ReportCollector()
+def main():
+    # Construct the path to CSD.csv
+
+    CDE_df, dtypes_dict = read_CDE()
+
+    # Once we have the dependencies, add a selector for the app mode on the sidebar.
+    st.sidebar.title("Upload")
+    # st.write(dtypes_dict)
+    # st.write(CDE_df)
+    data_files = st.sidebar.file_uploader("\tMETADATA tables:", type=['xlsx', 'csv'],accept_multiple_files=True)
 
 
-confirm_table = {}
-for table_name,dat in zip(tables,data):
+    if data_files is None or len(data_files)==0: 
+        st.sidebar.error("Please load data first.")
+        st.stop()
+        tables_loaded = False
+    elif len(data_files)>0:
+        tables, dfs = load_data(data_files, dtypes_dict)
+        tables_loaded = True
+        report_dat = dict()
+    else: # should be impossible
+        st.error('Something went wrong with the file upload. Please try again.')
+        st.stop()
+        tables_loaded = False
 
-    out.add_header(f"{table_name} table ({table_name}.csv)")
-    # data_file = "https://docs.google.com/spreadsheets/d/1xjxLftAyD0B8mPuOKUp5cKMKjkcsrp_zr9yuVULBLG8/edit?usp=sharing"
-    # Load the CDE.csv file and the reference table
 
-    # TODO: check order of columns
+    if tables_loaded:
+        st.sidebar.success(f"N={len(tables)} Tables loaded successfully")
+        st.sidebar.info(f'loaded Tables : {", ".join(map(str, tables))}')
 
-    retval = validate_table(dat, table_name, CDE_df, out)
+        col1, col2 = st.columns(2)
+
+        with col1:
+            table_choice = st.selectbox( 
+                "Choose the TABLE to validate 👇",
+                tables,
+                # index=None,
+                # placeholder="Select TABLE..",
+            )
+        with col2:  
+            st.write('You selected:', table_choice)
+
+    # once tables are loaded make a dropdown to choose which one to validate
+
+
+
+
+    report_dat = setup_report_data(report_dat, table_choice, dfs, CDE_df)
+
+
+    report = ReportCollector()
+    df,CDE = report_dat[table_choice]
+
+    retval = validate_table(df, table_choice, CDE, report)
 
     if retval == 0:
-        out.add_error(f"{table_name} table validation FAILED!! 👎 Please try again.")
-
-    confirm_table[table_name] = st.checkbox(f'Confirm {table_name}?')
-    if confirm_table[table_name]:
-        st.info('Thank you')
-
-    out.add_divider()
+        report.add_error(f"{table_choice} table has discrepancies!! 👎 Please try again.")
 
 
+    report.add_divider()
+    # # sex for qc
+    # st.subheader('Create "biological_sex_for_qc"')
+    # st.text('Count per sex group')
+    # st.write(data.sex.value_counts())
 
-if st.button("Finished?"):
-    #if not (clinical_conf & ph_conf & sex_conf & race_conf & fh_conf & rg_conf):
-    if not all([confirm_table[tab] for tab in tables]):
-        out.add_error('Did you forget to confirm any of the steps above?')
-        out.add_error("Please, tick all the boxes on the previous steps if the QC to meet GP2 standard format was successful")
-    else:
-        # Generate log for download
-        st.markdown('<p class="medium-font"> You have _confirmed_ your meta-data package meets all the ASAP CRN requirements. </p>', unsafe_allow_html=True )
-        
-        report_content = out.get_log()
+    # sexes=data.sex.dropna().unique()
+    # n_sexes = st.columns(len(sexes))
+    # mapdic={}
+    # for i, x in enumerate(n_sexes):
+    #     with x:
+    #         sex = sexes[i]
+    #         mapdic[sex]=x.selectbox(f"[{sex}]: For QC, please pick a word below",sexes,key=i)
+    #                             # ["Male", "Female","Intersex","Unnown"], key=i)
+    # data['sex_qc'] = data.sex.replace(mapdic)
 
+    # # cross-tabulation
+    # st.text('=== sex_qc x sex ===')
+    # xtab = data.pivot_table(index='sex_qc', columns='sex', margins=True,
+    #                         values='subject_id', aggfunc='count', fill_value=0)
+    # st.write(xtab)
+
+    # sex_conf = st.checkbox('Confirm sex_qc?')
+    # if sex_conf:
+    #     st.info('Thank you')
+
+
+    if retval == 1:
+        st.markdown('<p class="medium-font"> You have <it>confirmed</it> your meta-data package meets all the ASAP CRN requirements. </p>', unsafe_allow_html=True )
         #from streamlit.scriptrunner import RerunException
         def cach_clean():
             time.sleep(1)
             st.runtime.legacy_caching.clear_cache()
 
+        print(report)
         # Download button
-        st.download_button('📥 Download your QC log', data=report_content, file_name=LOG_NAME, mime='text/markdown')
+        csv = df.to_csv(index=False).encode('utf-8')
+        st.download_button('📥 Download your QC log', data=csv, file_name=LOG_NAME, mime='text/markdown')
+
+    else:
+        st.sidebar.error("Please validate data first.")
 
 
+if __name__ == "__main__":
 
+    # Provide template
+    st.markdown('<p class="big-font">ASAP scRNAseq </p>', unsafe_allow_html=True)
+    st.title('metadata data QC')
+    st.markdown('<p class="medium-font"> This app is intended to make sure ASAP Cloud Platform contributions follow the ASAP CRN CDE convenetions</p>', unsafe_allow_html=True)
+    st.markdown('[CDE v0.1](https://docs.google.com/spreadsheets/d/1xjxLftAyD0B8mPuOKUp5cKMKjkcsrp_zr9yuVULBLG8/edit?usp=sharing)')
 
-
-
-
-
-
-# Check all columns are present in the input 
-# We can do something such as checking the number of columns matches what we would expect ( a bit unsafe tho)
-# Otherwise, create a list with all col names
-
-
-
-# # Check all required columns are not missing
-# required_cols = [col for col in data.columns if col not in optional_cols]
-
-# data_non_miss_check = data[required_cols].copy()
-
-# if data_non_miss_check.isna().sum().sum()>0:
-#     st.error('There are some missing entries in the required columns. Please fill the missing cells ')
-#     st.text('First 30 entries with missing data in any required fields')
-#     st.write(data_non_miss_check[data_non_miss_check.isna().sum(1)>0].head(30))
-#     st.stop()
-# else:
-#     st.text('Check missing data in the required fields --> OK')
-
-
-
-# Perform numeric variables specific checks (ie, are thay on a sensible range or we can detect errors?)
-
-
-
-# # Example on how to map users code to our standard codes
-# # If we use this approach I would like to avoid code repetition and try to wrap this on a function and a for loop 
-# # I do not want to have this same thing 100 times
-# # Also, let's think if we can come up with something cooler to do this, something that looks nicer
-
-# # sex for qc
-# st.subheader('Create "biological_sex_for_qc"')
-# st.text('Count per sex group')
-# st.write(data.sex.value_counts())
-
-# sexes=data.sex.dropna().unique()
-# n_sexes = st.columns(len(sexes))
-# mapdic={}
-# for i, x in enumerate(n_sexes):
-#     with x:
-#         sex = sexes[i]
-#         mapdic[sex]=x.selectbox(f"[{sex}]: For QC, please pick a word below",
-#                             ["Male", "Female","Intersex","Unnown"], key=i)
-# data['sex_qc'] = data.sex.replace(mapdic)
-
-# # cross-tabulation
-# st.text('=== sex_qc x sex ===')
-# xtab = data.pivot_table(index='sex_qc', columns='sex', margins=True,
-#                         values='sample_id', aggfunc='count', fill_value=0)
-# st.write(xtab)
-
-# sex_conf = st.checkbox('Confirm sex_qc?')
-# if sex_conf:
-#     st.info('Thank you')
-
-
+    main()
