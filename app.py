@@ -5,6 +5,8 @@ ASAP scRNAseq metadata data QC
 https://github.com/asap_sc_collect
 
 v0.2
+
+metadata version v2
 20 August 2023
 
 Author:
@@ -14,10 +16,7 @@ Contributors:
     @AMCalejandro : https://github.com/AMCalejandro
 
 """
-
-
 # conda create -n sl11 python=3.11 pip streamlit pandas numpy great-expectations
-
 
 import numpy as np
 import pandas as pd
@@ -29,8 +28,6 @@ from pathlib import Path
 from utils.qcutils import validate_table
 from utils.io import ReportCollector, read_file, load_css,get_dtypes_dict
 
-
-
 # we use this as data location
 DATA_PATH_URL = "/Users/ergonyc/Projects/ASAP/meta-clean/clean"
 DATA_DEFAULT = "team-Hafler"
@@ -40,6 +37,9 @@ VALIDATE = "validate tables"
 DOWNLOAD = "download report"
 
 LOG_NAME = "report.md"
+
+# google id for ASAP_CDE sheet
+GOOGLE_SHEET_ID = "1xjxLftAyD0B8mPuOKUp5cKMKjkcsrp_zr9yuVULBLG8"
 
 # Initial page config
 
@@ -90,11 +90,25 @@ def setup_report_data(report_dat:dict,table_choice:str, dfs:dict, CDE_df:pd.Data
     return report_dat
 
 @st.cache_data
-def read_CDE():
+def read_CDE(metadata_version:str="v2"):
     """Load CDE from local csv and cache it, return a dataframe and dictionary of dtypes"""
     # Construct the path to CSD.csv
-    cde_file_path = "ASAP_CDE.csv"
-    CDE_df = pd.read_csv(cde_file_path)
+
+    if metadata_version == "v1":
+        sheet_name = "ASAP_CDE_v1"
+    else:
+        sheet_name = "ASAP_CDE_v2"
+    
+    cde_url = f"https://docs.google.com/spreadsheets/d/{GOOGLE_SHEET_ID}/gviz/tq?tqx=out:csv&sheet={sheet_name}"
+
+    try:
+        CDE_df = pd.read_csv(cde_url)
+        print("read url")
+    except:
+        CDE_df = pd.read_csv(f"{sheet_name}.csv")
+        print("read local file")
+
+
     dtypes_dict = get_dtypes_dict(CDE_df)
     return CDE_df, dtypes_dict
 
@@ -112,10 +126,22 @@ def main():
                 Platform contributions follow the ASAP CRN CDE conventions. </p> 
                 <p> v0.2, updated 07Nov2023. </p> 
                 """, unsafe_allow_html=True)
-    st.markdown('[CDE v0.1](https://docs.google.com/spreadsheets/d/1xjxLftAyD0B8mPuOKUp5cKMKjkcsrp_zr9yuVULBLG8/edit?usp=sharing)')
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        metadata_version = st.selectbox( 
+                                "choose meta version👇",
+                                ["v2","v1"],
+                                # index=None,
+                                # placeholder="Select TABLE..",
+                            )
+    with col2:
+        st.markdown('[ASAP CDE](https://docs.google.com/spreadsheets/d/1xjxLftAyD0B8mPuOKUp5cKMKjkcsrp_zr9yuVULBLG8/edit?usp=sharing)')
 
     # Load CDE from local csv
-    CDE_df, dtypes_dict = read_CDE()
+    CDE_df, dtypes_dict = read_CDE(metadata_version)
+
 
     # Once we have the dependencies, add a selector for the app mode on the sidebar.
     st.sidebar.title("Upload")
@@ -152,7 +178,9 @@ def main():
                 # placeholder="Select TABLE..",
             )
         with col2:  
-            st.write('You selected:', table_choice)
+            # st.write('You selected:', table_choice)
+            st.success(f"You selected: {table_choice}")
+
 
     # once tables are loaded make a dropdown to choose which one to validate
 
