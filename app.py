@@ -16,27 +16,15 @@ Contributors:
     @AMCalejandro : https://github.com/AMCalejandro
 
 """
-# conda create -n sl11 python=3.11 pip streamlit pandas numpy great-expectations
+# conda create -n sl11 python=3.11 pip streamlit pandas
 
-import numpy as np
 import pandas as pd
 import streamlit as st
-import os
 
 from pathlib import Path
 
 from utils.qcutils import validate_table
 from utils.io import ReportCollector, read_file, load_css,get_dtypes_dict
-
-# we use this as data location
-DATA_PATH_URL = "/Users/ergonyc/Projects/ASAP/meta-clean/clean"
-DATA_DEFAULT = "team-Hafler"
-
-LOAD_DATA = "load metadata table(s)"
-VALIDATE = "validate tables"
-DOWNLOAD = "download report"
-
-LOG_NAME = "report.md"
 
 # google id for ASAP_CDE sheet
 GOOGLE_SHEET_ID = "1xjxLftAyD0B8mPuOKUp5cKMKjkcsrp_zr9yuVULBLG8"
@@ -181,10 +169,7 @@ def main():
             # st.write('You selected:', table_choice)
             st.success(f"You selected: {table_choice}")
 
-
     # once tables are loaded make a dropdown to choose which one to validate
-
-
 
     # initialize the data structure and instance of ReportCollector
     report_dat = setup_report_data(report_dat, table_choice, dfs, CDE_df)
@@ -221,11 +206,6 @@ def main():
         # Download button
         st.download_button('📥 Download your QC log', data=report_content, file_name=f"{table_choice}.md", mime='text/markdown')
 
-
-        # print(report)
-        # # Download button
-        # csv = df.to_csv(index=False).encode('utf-8')
-        # st.download_button('📥 Download your QC log', data=csv, file_name=LOG_NAME, mime='text/markdown')
         return None
 
 
