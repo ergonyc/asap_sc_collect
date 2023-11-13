@@ -9,7 +9,7 @@ STUDY,PI_full_name,"Principal Investigator Name.:   Full name of the lab Princip
 STUDY,PI_email,Principal Investigator E-mail.:   E-mail address of the Principle Investigator of the Lab submitting the data.,String,Required,
 STUDY,contributor_names,"Contributor(s).:   Names of all contributors to the dataset. Format:  First name, Initial, Last name ; First name, Initial, Last name ; ...",String,Required,
 STUDY,submitter_name,Data Submitter Name.:   Full name of individual submitting data.,String,Required,
-STUDY,submittor_email,Data Submitter E-Mail.:   Email address of individual submitting data.,String,Required,
+STUDY,submitter_name,Data Submitter E-Mail.:   Email address of individual submitting data.,String,Required,
 STUDY,ASAP_grant_id,ASAP Grant ID.:   ID of the ASAP grant funding the study.  e.g. ASAP-000xxx,String,Required,
 STUDY,other_funding_source,Other Funding.:   Details of other funding contributing to data generation.,String,Required,
 STUDY,publication_DOI,bioRxiv DOI.:   Digital Object Identifer for pre-print(s). NA if not available.,String,Required,
@@ -125,6 +125,10 @@ SAMPLE,DV200,DV200.:   Value is the percentage of RNA fragments larger than 200 
 SAMPLE,pm_PH,Post-mortem PH.:   PH measured in the tissue. PH is designated as a number ranging between 0 and 14.,Float,Optional,(0-14)
 SAMPLE,donor_id,Donor ID.:   free-text identifier that distinguishes the unique individual that data were derived from. Included for compatibilty with CELLxGENE.,String,Optional,
 DATA,sample_id,"Sample ID.:   ID of each individual sample used in the study (e.g. cortex of anterior cingulate gyrus); if from the same brain several regions are included in the study, each region (i.e. each sample) has different ID and listed as a separate entry",String,Required,
+DATA,replicate,"Replicate.:   Indicator for replicates of the sample.  Replicates could be biological or tecnical.  Indicate biological replicates as capitalized ""Rep"" + replicated number (i.e. Rep1, Rep2, etc) and technical replicates with lowercase ""rep"" + replicate number (i.e., rep1, rep2 etc.)",String,Required,
+DATA,replicate_count,"Replicate Count.:   Number of replicates of this sample.  Typically this will be 1, but if replicates have been collected indicate how many total.",Integer,Required,
+DATA,repeated_sample,Repeated Sample.:   Repeated Sample indicator.  This will be treated as a boolean.  i.e. enter 0 unless sample is a replicate.,Integer,Required,
+DATA,batch,"Batch.:   Label to enumerate the batch. This will probablby numerica, but could be coded as letters.",String,Required,
 DATA,file_type,"File Type.:   Type of file uploaded for this sample.  We are asking for ""fastq"" for raw data transfer.",Enum,Required,"[""fastq"",""Per sample raw file"", ""Per sample processed file"", ""Combined analysis files"", ""annData"", ""vHDF"", ""plink2"", ""VCF"", ""csv""]"
 DATA,file_name,"File Name.:   Full name of file containing the sample data.  For paired-end data (e.g. `sequencing_end` = ""single"") the ROOT of the file can be specified, and the others will be inferred. ",String,Required,
 DATA,file_description,File Description.:   Short description of the file.,String,Required,

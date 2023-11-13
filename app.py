@@ -23,8 +23,8 @@ import streamlit as st
 
 from pathlib import Path
 
-from utils.qcutils import validate_table
-from utils.io import ReportCollector, read_file, load_css,get_dtypes_dict
+from utils.qcutils import validate_table, GOOGLE_SHEET_ID
+from utils.io import ReportCollector, load_css, get_dtypes_dict
 
 # google id for ASAP_CDE sheet
 GOOGLE_SHEET_ID = "1xjxLftAyD0B8mPuOKUp5cKMKjkcsrp_zr9yuVULBLG8"
@@ -47,19 +47,32 @@ load_css("css/css.css")
 
 # Define some custom functions
 def read_file(data_file,dtypes_dict):
+    """
+    read csv or xlsx file and return a dataframe
+    """
     if data_file.type == "text/csv":
         df = pd.read_csv(data_file,dtype=dtypes_dict)        
         # df = read_meta_table(table_path,dtypes_dict)
     # assume that the xlsx file remembers the dtypes
     elif data_file.type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
         df = pd.read_excel(data_file, sheet_name=0)
-    return (df)
+    return df
 
 
 # TODO: set up dataclasses to hold the data
 @st.cache_data
 def load_data(data_file, dtypes):
-    """Load data from a files and cache it, return a dictionary of dataframe"""
+    """
+    Load data from a files and cache it, return a dictionary of dataframe
+    """
+    def read_file(data_file):
+        if data_file.type == "text/csv":
+            df = pd.read_csv(data_file)#, dtype=dtypes_dict)        
+            # df = read_meta_table(table_path,dtypes_dict)
+        # assume that the xlsx file remembers the dtypes
+        elif data_file.type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
+            df = pd.read_excel(data_file, sheet_name=0)
+        return df
     tables = [dat_f.name.split('.')[0] for dat_f in data_file]
 
     dfs = { dat_f.name.split('.')[0]:read_file(dat_f,dtypes) for dat_f in data_file }
@@ -77,9 +90,13 @@ def setup_report_data(report_dat:dict,table_choice:str, dfs:dict, CDE_df:pd.Data
     report_dat[table_choice] = dat
     return report_dat
 
+
+# can't cache read_ASAP_CDE so copied code here
 @st.cache_data
 def read_CDE(metadata_version:str="v2"):
-    """Load CDE from local csv and cache it, return a dataframe and dictionary of dtypes"""
+    """
+    Load CDE from local csv and cache it, return a dataframe and dictionary of dtypes
+    """
     # Construct the path to CSD.csv
 
     if metadata_version == "v1":
@@ -178,6 +195,7 @@ def main():
     # unpack data
     df,CDE = report_dat[table_choice]
 
+    st.success(f"Validating n={df.shape[0]} rows from {table_choice}")
     # perform the valadation
     retval = validate_table(df, table_choice, CDE, report)
 

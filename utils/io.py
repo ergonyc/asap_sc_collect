@@ -176,13 +176,3 @@ def load_css(file_name):
    with open(file_name) as f:
       st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
 
-# Define some custom functions
-def read_file(data_file):
-    if data_file.type == "text/csv":
-        df = pd.read_csv(data_file)#, dtype=dtypes_dict)        
-        # df = read_meta_table(table_path,dtypes_dict)
-    # assume that the xlsx file remembers the dtypes
-    elif data_file.type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
-        df = pd.read_excel(data_file, sheet_name=0)
-    return (df)
-
