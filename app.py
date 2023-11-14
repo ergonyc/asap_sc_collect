@@ -45,18 +45,18 @@ st.set_page_config(
 
 load_css("css/css.css")
 
-# Define some custom functions
-def read_file(data_file,dtypes_dict):
-    """
-    read csv or xlsx file and return a dataframe
-    """
-    if data_file.type == "text/csv":
-        df = pd.read_csv(data_file,dtype=dtypes_dict)        
-        # df = read_meta_table(table_path,dtypes_dict)
-    # assume that the xlsx file remembers the dtypes
-    elif data_file.type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
-        df = pd.read_excel(data_file, sheet_name=0)
-    return df
+# # Define some custom functions
+# def read_file(data_file,dtypes_dict):
+#     """
+#     read csv or xlsx file and return a dataframe
+#     """
+#     if data_file.type == "text/csv":
+#         df = pd.read_csv(data_file,dtype=dtypes_dict)        
+#         # df = read_meta_table(table_path,dtypes_dict)
+#     # assume that the xlsx file remembers the dtypes
+#     elif data_file.type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
+#         df = pd.read_excel(data_file, sheet_name=0)
+#     return df
 
 
 # TODO: set up dataclasses to hold the data
@@ -65,14 +65,15 @@ def load_data(data_file, dtypes):
     """
     Load data from a files and cache it, return a dictionary of dataframe
     """
-    def read_file(data_file):
+    def read_file(data_file,dtypes):
         if data_file.type == "text/csv":
-            df = pd.read_csv(data_file)#, dtype=dtypes_dict)        
+            df = pd.read_csv(data_file, dtype=dtypes)        
             # df = read_meta_table(table_path,dtypes_dict)
         # assume that the xlsx file remembers the dtypes
         elif data_file.type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
             df = pd.read_excel(data_file, sheet_name=0)
         return df
+    
     tables = [dat_f.name.split('.')[0] for dat_f in data_file]
 
     dfs = { dat_f.name.split('.')[0]:read_file(dat_f,dtypes) for dat_f in data_file }

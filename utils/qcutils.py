@@ -1,8 +1,11 @@
 # imports
 import pandas as pd
 
-from .io import ReportCollector, columnize
+from .io import ReportCollector, columnize, read_meta_table, get_dtypes_dict
+from pathlib import Path
 
+# google id for ASAP_CDE sheet
+GOOGLE_SHEET_ID = "1xjxLftAyD0B8mPuOKUp5cKMKjkcsrp_zr9yuVULBLG8"
 
 def validate_table(table_in: pd.DataFrame, table_name: str, CDE: pd.DataFrame, out: ReportCollector):
     """
@@ -107,6 +110,7 @@ def validate_table(table_in: pd.DataFrame, table_name: str, CDE: pd.DataFrame, o
     return retval
 
 
+
 ######## HELPERS ########
 # Define a function to only capitalize the first letter of a string
 def capitalize_first_letter(s):
@@ -126,20 +130,6 @@ def prep_table(df_in:pd.DataFrame, CDE:pd.DataFrame) -> pd.DataFrame:
             df[col] = df[col].apply(capitalize_first_letter) 
     return df
 
-def force_enum_string(df_in:pd.DataFrame, df_name:str, CDE:pd.DataFrame) -> pd.DataFrame:
-    """helper to force Enum columns to string data type, and force capitalization of first letters"""
-    df = df_in.copy()
-    string_enum_fields = CDE[(CDE["Table"] == df_name) & 
-                                (CDE["DataType"].isin(["Enum", "String"]))]["Field"].tolist()
-    # Convert the specified columns to string data type using astype() without a loop
-    columns_to_convert = {col: 'str' for col in string_enum_fields if col in df.columns}
-    df = df.astype(columns_to_convert)
-    
-    for col in string_enum_fields:
-        if col in df.columns and col not in ["assay", "file_type"]:
-            df[col] = df[col].apply(capitalize_first_letter)
-
-    return df
 def reorder_table_to_CDE(df: pd.DataFrame, df_name:str, CDE: pd.DataFrame) -> pd.DataFrame:
     """ convert table to CDE field order and create empty columns for missing fields"""
     col_order = CDE[CDE["Table"]==df_name].Field.tolist()
@@ -154,4 +144,43 @@ def reorder_table_to_CDE(df: pd.DataFrame, df_name:str, CDE: pd.DataFrame) -> pd
 
     return df_out
 
+def validate_file(table_name, path, report, CDE_df):
+    # Construct the path to CSD.csv
+    try:
+        ref_file_path = Path(path) / f"{table_name}.csv"
+        reference_df = read_meta_table(ref_file_path,get_dtypes_dict(CDE_df)) 
 
+    except:
+        report.add_error(f"Could not find {table_name}.csv")
+        return 0
+
+    report.add_header(f"{table_name} table ({table_name}.csv)")
+
+    retval = validate_table(reference_df, table_name, CDE_df, report)
+
+    return retval
+
+
+def read_ASAP_CDE(metadata_version:str="v2"):
+    """
+    Load CDE from local csv and cache it, return a dataframe and dictionary of dtypes
+    """
+    # Construct the path to CSD.csv
+
+    if metadata_version == "v1":
+        sheet_name = "ASAP_CDE_v1"
+    else:
+        sheet_name = "ASAP_CDE_v2"
+    
+    cde_url = f"https://docs.google.com/spreadsheets/d/{GOOGLE_SHEET_ID}/gviz/tq?tqx=out:csv&sheet={sheet_name}"
+
+    try:
+        CDE_df = pd.read_csv(cde_url)
+        print("read url")
+    except:
+        CDE_df = pd.read_csv(f"{sheet_name}.csv")
+        print("read local file")
+
+
+    dtypes_dict = get_dtypes_dict(CDE_df)
+    return CDE_df, dtypes_dict
