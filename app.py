@@ -94,7 +94,7 @@ def setup_report_data(report_dat:dict,table_choice:str, dfs:dict, CDE_df:pd.Data
 
 # can't cache read_ASAP_CDE so copied code here
 @st.cache_data
-def read_CDE(metadata_version:str="v2"):
+def read_CDE(metadata_version:str="v2.1"):
     """
     Load CDE from local csv and cache it, return a dataframe and dictionary of dtypes
     """
@@ -102,9 +102,14 @@ def read_CDE(metadata_version:str="v2"):
 
     if metadata_version == "v1":
         sheet_name = "ASAP_CDE_v1"
-    else:
+    elif metadata_version == "v2":
         sheet_name = "ASAP_CDE_v2"
-    
+    elif metadata_version == "v2.1":
+        sheet_name = "ASAP_CDE_v2.1"
+    else:
+        sheet_name = "ASAP_CDE_v2.1"
+
+
     cde_url = f"https://docs.google.com/spreadsheets/d/{GOOGLE_SHEET_ID}/gviz/tq?tqx=out:csv&sheet={sheet_name}"
 
     try:
@@ -138,7 +143,7 @@ def main():
     with col1:
         metadata_version = st.selectbox( 
                                 "choose meta version👇",
-                                ["v2","v1"],
+                                ["v2.1","v2","v1"],
                                 # index=None,
                                 # placeholder="Select TABLE..",
                             )
