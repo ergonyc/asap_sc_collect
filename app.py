@@ -27,8 +27,8 @@ from utils.qcutils import validate_table, GOOGLE_SHEET_ID
 from utils.io import ReportCollector, load_css, get_dtypes_dict
 
 # google id for ASAP_CDE sheet
-GOOGLE_SHEET_ID = "1xjxLftAyD0B8mPuOKUp5cKMKjkcsrp_zr9yuVULBLG8"
-
+# GOOGLE_SHEET_ID = "1xjxLftAyD0B8mPuOKUp5cKMKjkcsrp_zr9yuVULBLG8"
+GOOGLE_SHEET_ID = "1c0z5KvRELdT2AtQAH2Dus8kwAyyLrR0CROhKOjpU4Vc"
 # Initial page config
 
 st.set_page_config(
@@ -66,8 +66,11 @@ def load_data(data_file, dtypes):
     Load data from a files and cache it, return a dictionary of dataframe
     """
     def read_file(data_file,dtypes):
+        """
+        TODO: depricate dtypes
+        """
         if data_file.type == "text/csv":
-            df = pd.read_csv(data_file, dtype=dtypes)        
+            df = pd.read_csv(data_file, dtype=str)        
             # df = read_meta_table(table_path,dtypes_dict)
         # assume that the xlsx file remembers the dtypes
         elif data_file.type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
@@ -75,7 +78,7 @@ def load_data(data_file, dtypes):
         return df
     
     tables = [dat_f.name.split('.')[0] for dat_f in data_file]
-
+    print(tables)
     dfs = { dat_f.name.split('.')[0]:read_file(dat_f,dtypes) for dat_f in data_file }
 
     return tables,dfs
@@ -100,16 +103,22 @@ def read_CDE(metadata_version:str="v2.1"):
     """
     # Construct the path to CSD.csv
 
-    if metadata_version == "v1":
-        sheet_name = "ASAP_CDE_v1"
-    elif metadata_version == "v2":
-        sheet_name = "ASAP_CDE_v2"
-    elif metadata_version == "v2.1":
-        sheet_name = "ASAP_CDE_v2.1"
+    # if metadata_version == "v1":
+    #     sheet_name = "ASAP_CDE_v1"
+    # elif metadata_version == "v2":
+    #     sheet_name = "ASAP_CDE_v2"
+    # elif metadata_version == "v2.1":
+    #     sheet_name = "ASAP_CDE_v2.1"
+    # else:
+    #     sheet_name = "ASAP_CDE_v2.1"
+
+    if metadata_version in ["v1","v2","v2.1","v3.0-beta"]:
+        print(f"metadata_version: {metadata_version}")
     else:
-        sheet_name = "ASAP_CDE_v2.1"
-
-
+        print(f"Unsupported metadata_version: {metadata_version}")
+        return 0,0
+    
+    sheet_name = metadata_version
     cde_url = f"https://docs.google.com/spreadsheets/d/{GOOGLE_SHEET_ID}/gviz/tq?tqx=out:csv&sheet={sheet_name}"
 
     try:
@@ -143,12 +152,12 @@ def main():
     with col1:
         metadata_version = st.selectbox( 
                                 "choose meta version👇",
-                                ["v2.1","v2","v1"],
+                                ["v3.0-beta","v2.1","v2","v1"],
                                 # index=None,
                                 # placeholder="Select TABLE..",
                             )
     with col2:
-        st.markdown('[ASAP CDE](https://docs.google.com/spreadsheets/d/1xjxLftAyD0B8mPuOKUp5cKMKjkcsrp_zr9yuVULBLG8/edit?usp=sharing)')
+        st.markdown(f'[ASAP CDE](https://docs.google.com/spreadsheets/d/{GOOGLE_SHEET_ID}/edit?usp=sharing)')
 
     # Load CDE from local csv
     CDE_df, dtypes_dict = read_CDE(metadata_version)
