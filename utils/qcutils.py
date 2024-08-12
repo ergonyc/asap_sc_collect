@@ -5,8 +5,8 @@ from .io import ReportCollector, columnize, read_meta_table, get_dtypes_dict
 from pathlib import Path
 
 # google id for ASAP_CDE sheet
-GOOGLE_SHEET_ID = "1xjxLftAyD0B8mPuOKUp5cKMKjkcsrp_zr9yuVULBLG8"
-
+# GOOGLE_SHEET_ID = "1xjxLftAyD0B8mPuOKUp5cKMKjkcsrp_zr9yuVULBLG8"
+GOOGLE_SHEET_ID = "1c0z5KvRELdT2AtQAH2Dus8kwAyyLrR0CROhKOjpU4Vc"
 def validate_table(table_in: pd.DataFrame, table_name: str, CDE: pd.DataFrame, out: ReportCollector):
     """
     Validate a table against the CDE, and log results to streamlit (outp="streamlit") or to a 
@@ -167,18 +167,30 @@ def read_ASAP_CDE(metadata_version:str="v2"):
     """
     # Construct the path to CSD.csv
 
-    if metadata_version == "v1":
-        sheet_name = "ASAP_CDE_v1"
-    else:
-        sheet_name = "ASAP_CDE_v2"
+    # if metadata_version == "v1":
+    #     sheet_name = "ASAP_CDE_v1"
+    # else:
+    #     sheet_name = "ASAP_CDE_v2"
     
-    cde_url = f"https://docs.google.com/spreadsheets/d/{GOOGLE_SHEET_ID}/gviz/tq?tqx=out:csv&sheet={sheet_name}"
+    if metadata_version in ["v1","v2","v2.1","v3.0-beta"]:
+        print(f"metadata_version: {metadata_version}")
+    else:
+        print(f"Unsupported metadata_version: {metadata_version}")
+        return 0,0
+    
+    
+
+    cde_url = f"https://docs.google.com/spreadsheets/d/{GOOGLE_SHEET_ID}/gviz/tq?tqx=out:csv&sheet={metadata_version}"
+
+
+    # https://docs.google.com/spreadsheets/d/1c0z5KvRELdT2AtQAH2Dus8kwAyyLrR0CROhKOjpU4Vc/edit?usp=sharing
 
     try:
         CDE_df = pd.read_csv(cde_url)
         print("read url")
     except:
-        CDE_df = pd.read_csv(f"{sheet_name}.csv")
+        file_name = f"ASAP_CDE_{metadata_version}.csv"
+        CDE_df = pd.read_csv(file_name)
         print("read local file")
 
 
